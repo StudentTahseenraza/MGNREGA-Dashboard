@@ -35,30 +35,26 @@ app.use(compression());
 // ======================
 // CORS Configuration (UPDATED for your frontend)
 // ======================
+// CORS configuration for production - UPDATED
 const allowedOrigins = [
-  'https://mgnrega-dashboard-eta.vercel.app', // Your production frontend
-  'http://localhost:3000', // Local development
-  'http://127.0.0.1:3000' // Local development alternative
+  'https://mgnrega-dashboard-eta.vercel.app', // Your new frontend URL
+  'https://mgnrega-dashboard-virid.vercel.app', // Your previous frontend URL
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
 ];
 
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, server-to-server, or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) === -1) {
-      console.log('CORS blocked for origin:', origin);
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
-    }
-    
-    console.log('CORS allowed for origin:', origin);
-    return callback(null, true);
-  },
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   exposedHeaders: ['Content-Length', 'X-Request-Id']
+}));
+
+// Or use this simpler approach for development:
+app.use(cors({
+  origin: true, // Allow all origins in development
+  credentials: true
 }));
 
 // Handle preflight requests
