@@ -9,6 +9,9 @@ const DistrictSelector = ({ onDistrictSelect, language }) => {
   const { location, error: geoError, getLocation } = useGeolocation()
   const { districts, loading, error } = useDistrictsList()
 
+  // Production API URL
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://mgnrega-dashboard-tf2o.onrender.com/api'
+
   useEffect(() => {
     if (location) {
       detectDistrictFromCoords(location.latitude, location.longitude)
@@ -18,8 +21,10 @@ const DistrictSelector = ({ onDistrictSelect, language }) => {
   const detectDistrictFromCoords = async (lat, lng) => {
     setIsDetecting(true)
     try {
-      const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
-      const response = await fetch(`${API_BASE}/geolocation/detect-district`, {
+      const url = `${API_BASE}/geolocation/detect-district`
+      console.log('Detecting district from:', url)
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

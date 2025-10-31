@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
 
-// Use environment variable or fallback to production URL
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://mgnrega-dashboard-tf2o.onrender.com/api'
+// Production API URL - directly set for deployment
+const PRODUCTION_API_BASE = 'https://mgnrega-dashboard-tf2o.onrender.com/api'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || PRODUCTION_API_BASE
+
+console.log('API Base URL:', API_BASE) // Debug log
 
 export const useDistrictData = (districtId) => {
   const [data, setData] = useState(null)
@@ -16,14 +19,17 @@ export const useDistrictData = (districtId) => {
       setError(null)
       
       try {
-        console.log(`Fetching data from: ${API_BASE}/data/district/${districtId}/summary`)
-        const response = await fetch(`${API_BASE}/data/district/${districtId}/summary`)
+        const url = `${API_BASE}/data/district/${districtId}/summary`
+        console.log('Fetching from URL:', url)
+        
+        const response = await fetch(url)
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
         }
         
         const result = await response.json()
+        console.log('API Response:', result)
         setData(result.data)
       } catch (err) {
         console.error('Error fetching district data:', err)
@@ -47,14 +53,19 @@ export const useDistrictsList = () => {
   useEffect(() => {
     const fetchDistricts = async () => {
       setLoading(true)
+      setError(null)
       try {
-        const response = await fetch(`${API_BASE}/districts`)
+        const url = `${API_BASE}/districts`
+        console.log('Fetching districts from:', url)
+        
+        const response = await fetch(url)
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
         }
         
         const result = await response.json()
+        console.log('Districts API Response:', result)
         setDistricts(result.data)
       } catch (err) {
         console.error('Error fetching districts:', err)
