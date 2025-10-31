@@ -36,7 +36,7 @@ app.use(compression());
 // CORS Configuration (UPDATED for your frontend)
 // ======================
 const allowedOrigins = [
-  'https://mgnrega-dashboard-virid.vercel.app', // Your production frontend
+  'https://mgnrega-dashboard-eta.vercel.app', // Your production frontend
   'http://localhost:3000', // Local development
   'http://127.0.0.1:3000' // Local development alternative
 ];
