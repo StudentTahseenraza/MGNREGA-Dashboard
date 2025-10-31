@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
+// Use environment variable or fallback to production URL
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://mgnrega-dashboard-tf2o.onrender.com/api'
 
 export const useDistrictData = (districtId) => {
   const [data, setData] = useState(null)
@@ -15,7 +16,7 @@ export const useDistrictData = (districtId) => {
       setError(null)
       
       try {
-        console.log(`Fetching data for district ${districtId} from: ${API_BASE}/data/district/${districtId}/summary`)
+        console.log(`Fetching data from: ${API_BASE}/data/district/${districtId}/summary`)
         const response = await fetch(`${API_BASE}/data/district/${districtId}/summary`)
         
         if (!response.ok) {
@@ -23,7 +24,6 @@ export const useDistrictData = (districtId) => {
         }
         
         const result = await response.json()
-        console.log('API Response:', result)
         setData(result.data)
       } catch (err) {
         console.error('Error fetching district data:', err)
@@ -48,7 +48,6 @@ export const useDistrictsList = () => {
     const fetchDistricts = async () => {
       setLoading(true)
       try {
-        console.log('Fetching districts from:', `${API_BASE}/districts`)
         const response = await fetch(`${API_BASE}/districts`)
         
         if (!response.ok) {
@@ -56,7 +55,6 @@ export const useDistrictsList = () => {
         }
         
         const result = await response.json()
-        console.log('Districts API Response:', result)
         setDistricts(result.data)
       } catch (err) {
         console.error('Error fetching districts:', err)

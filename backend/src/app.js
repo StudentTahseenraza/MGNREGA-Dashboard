@@ -16,91 +16,159 @@ dotenv.config();
 
 const app = express();
 
+// ======================
+// CRITICAL FIX: Trust proxy for Render
+// ======================
+app.set('trust proxy', 1);
+
 // Connect to MongoDB
 connectDB();
 
-// Security middleware
-app.use(helmet());
+// ======================
+// Security Middleware
+// ======================
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(compression());
 
-// CORS configuration
+// ======================
+// CORS Configuration (UPDATED for your frontend)
+// ======================
+const allowedOrigins = [
+  'https://mgnrega-dashboard-virid.vercel.app', // Your production frontend
+  'http://localhost:3000', // Local development
+  'http://127.0.0.1:3000' // Local development alternative
+];
+
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, server-to-server, or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      console.log('CORS blocked for origin:', origin);
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    
+    console.log('CORS allowed for origin:', origin);
+    return callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));     
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Length', 'X-Request-Id']
+}));
 
-// Rate limiting
+// Handle preflight requests
+app.options('*', cors());
+
+// ======================
+// Rate Limiting (FIXED for proxy)
+// ======================
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // Limit each IP to 100 requests per windowMs
   message: {
+    success: false,
     error: 'Too many requests from this IP, please try again later.'
-  }
+  },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  trustProxy: true // CRITICAL: Trust Render proxy
 });
+
 app.use('/api/', limiter);
 
-// Body parsing middleware
+// ======================
+// Body Parsing Middleware
+// ======================
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Request logging
+// ======================
+// Request Logging
+// ======================
 app.use(requestLogger);
 
-// Health check endpoint
+// ======================
+// Health Check Endpoint
+// ======================
 app.get('/health', (req, res) => {
-  // Import mongoose locally to avoid circular dependency
-  import('./config/database.js').then(({ default: mongoose }) => {
-    res.status(200).json({
-      status: 'OK',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
-    });
-  }).catch(() => {
-    res.status(200).json({
-      status: 'OK',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      database: 'unknown'
-    });
+  res.status(200).json({
+    success: true,
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+    service: 'MGNREGA Backend API',
+    version: '1.0.0',
+    frontendUrl: process.env.FRONTEND_URL || 'Not set'
   });
 });
 
-// API routes with debug logging
-app.use('/api/districts', districtRoutes);
-console.log('✅ Districts routes registered');
-
-app.use('/api/data', dataRoutes);
-console.log('✅ Data routes registered');
-
-app.use('/api/geolocation', geolocationRoutes);
-console.log('✅ Geolocation routes registered');
-
-// Debug all registered routes
-app._router.stack.forEach((middleware) => {
-  if (middleware.route) {
-    console.log(`Route: ${middleware.route.path} - ${Object.keys(middleware.route.methods)}`);
-  } else if (middleware.name === 'router') {
-    console.log(`Router: ${middleware.regexp}`);
-    middleware.handle.stack.forEach((handler) => {
-      if (handler.route) {
-        console.log(`  -> ${handler.route.path} - ${Object.keys(handler.route.methods)}`);
-      }
-    });
-  }
+// ======================
+// Root Endpoint
+// ======================
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: '🚀 MGNREGA Backend API is running!',
+    service: 'MGNREGA Dashboard Backend',
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/health',
+      districts: '/api/districts',
+      data: '/api/data/district/:id/summary',
+      geolocation: '/api/geolocation/detect-district',
+      documentation: 'See README for full API documentation'
+    }
+  });
 });
 
-// 404 handler
+// ======================
+// API Routes
+// ======================
+app.use('/api/districts', districtRoutes);
+app.use('/api/data', dataRoutes);
+app.use('/api/geolocation', geolocationRoutes);
+
+// ======================
+// 404 Handler
+// ======================
 app.use('*', (req, res) => {
   res.status(404).json({
+    success: false,
     error: 'Route not found',
-    path: req.originalUrl
+    path: req.originalUrl,
+    method: req.method,
+    availableEndpoints: [
+      'GET /health',
+      'GET /',
+      'GET /api/districts',
+      'GET /api/districts/:id',
+      'GET /api/districts/search/:query',
+      'GET /api/data/district/:id/summary',
+      'GET /api/data/district/:id/history',
+      'GET /api/data/compare?districts=1,2,3',
+      'POST /api/geolocation/detect-district',
+      'GET /api/geolocation/detect-by-ip'
+    ],
+    documentation: 'Check / endpoint for API information'
   });
 });
 
-// Error handling middleware
+// ======================
+// Error Handling Middleware
+// ======================
 app.use(errorHandler);
+
+// ======================
+// Server Configuration
+// ======================
+const PORT = process.env.PORT || 3001;
 
 export default app;
