@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 
-// Production API URL - directly set for deployment
+// FIX: Add /api to the production URL
 const PRODUCTION_API_BASE = 'https://mgnrega-dashboard-tf2o.onrender.com/api'
 const API_BASE = import.meta.env.VITE_API_BASE_URL || PRODUCTION_API_BASE
 
-console.log('API Base URL:', API_BASE) // Debug log
+console.log('API Base URL:', API_BASE) // Should show /api at the end
 
 export const useDistrictData = (districtId) => {
   const [data, setData] = useState(null)
